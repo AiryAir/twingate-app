@@ -19,13 +19,15 @@ LOCK_FILE = os.path.join(GLib.get_user_runtime_dir(), "twingate-tray.lock")
 
 
 def is_active():
-    """Check twingate service status via systemctl (no extra shell overhead)."""
+    """Check twingate connection status via 'twingate status'."""
     try:
-        return subprocess.call(
-            ["systemctl", "is-active", "-q", "twingate"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        ) == 0
-    except FileNotFoundError:
+        result = subprocess.run(
+            ["twingate", "status"],
+            capture_output=True, text=True, timeout=5,
+        )
+        first_line = result.stdout.strip().split("\n")[0].lower()
+        return first_line == "online"
+    except (FileNotFoundError, subprocess.TimeoutExpired, IndexError):
         return False
 
 
@@ -88,11 +90,16 @@ class TwingateTray:
         self._poll_source = GLib.timeout_add(interval, self._poll_status)
 
     def _on_toggle(self, _widget):
-        cmd = "stop" if self.connected else "start"
-        subprocess.Popen(
-            ["pkexec", "twingate", cmd],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
+        if self.connected:
+            subprocess.Popen(
+                ["pkexec", "twingate", "stop"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        else:
+            subprocess.Popen(
+                ["twingate", "start"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
         # Switch to fast polling briefly to pick up the change quickly
         self._fast_polls_left = FAST_POLL_COUNT
         self._schedule_poll(FAST_POLL_MS)
