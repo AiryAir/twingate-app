@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Twingate Tray
+Comment=Twingate VPN toggle for the system tray
+# Update paths below to match your install location
+Exec=python3 /path/to/twingate-tray.py
+Icon=/path/to/icons/twingate-connected.svg
+Terminal=false
+Categories=Network;
+StartupNotify=false
